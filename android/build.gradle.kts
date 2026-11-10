@@ -15,6 +15,29 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
+// Paksa semua plugin dikompilasi dengan compileSdk 36
+subprojects {
+    afterEvaluate {
+        val ext = extensions.findByName("android")
+        if (ext != null) {
+            try {
+                ext.javaClass
+                    .getMethod("setCompileSdk", Integer::class.javaObjectType)
+                    .invoke(ext, 36)
+            } catch (e: Exception) {
+                try {
+                    ext.javaClass
+                        .getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
+                        .invoke(ext, 36)
+                } catch (e2: Exception) {
+                    println("compileSdk override gagal untuk ${project.name}")
+                }
+            }
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
