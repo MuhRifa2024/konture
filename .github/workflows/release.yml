@@ -1,0 +1,79 @@
+name: Auto Tag & Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Baca versi dari pubspec.yaml
+        id: ver
+        run: |
+          V=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+
+      - name: Cek tag
+        id: check
+        run: |
+          if git rev-parse "refs/tags/${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.exists == 'false'
+        with: { distribution: temurin, java-version: '17' }
+
+      - uses: subosito/flutter-action@v2
+        if: steps.check.outputs.exists == 'false'
+        with: { channel: stable, cache: true }
+
+      - name: Analyze & test
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Siapkan signing (jika secrets tersedia)
+        if: steps.check.outputs.exists == 'false'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload.jks
+            cat > android/key.properties <<PROPS
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=upload.jks
+          PROPS
+          else
+            echo "Secrets keystore tidak ada: APK ditandatangani dengan kunci debug."
+          fi
+
+      - name: Build APK
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          flutter build apk --release
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             kontur-survey-${{ steps.ver.outputs.tag }}.apk
+
+      - name: Buat tag + GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: kontur-survey-*.apk
+          generate_release_notes: true

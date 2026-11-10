@@ -1,0 +1,26 @@
+name: kontur_survey
+description: Survei kontur dengan GNSS, barometer, dan trilaterasi.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  geolocator: ^13.0.1
+  sensors_plus: ^6.0.1
+  proj4dart: ^2.1.0
+  flutter_blue_plus: ^1.32.12
+  path_provider: ^2.1.4
+  share_plus: ^10.0.2
+  file_picker: ^8.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
