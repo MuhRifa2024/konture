@@ -3,7 +3,7 @@ import 'package:kontur_survey/contour/contour.dart';
 
 void main() {
   test('bidang z = x menghasilkan kontur lurus di x = level', () {
-    final nx = 11, ny = 11;
+    const nx = 11, ny = 11;
     final v = List.generate(ny, (j) => List.generate(nx, (i) => i.toDouble()));
     final g = Grid(0, 0, 1, nx, ny, v);
     final lines = marchingSquares(g, [5.5]);

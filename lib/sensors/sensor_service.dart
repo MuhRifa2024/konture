@@ -13,6 +13,34 @@ class SensorService {
   StreamSubscription<Position>? _ps;
   StreamSubscription<BarometerEvent>? _bs;
 
+  LocationSettings _settings() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+          intervalDuration: const Duration(seconds: 1),
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationTitle: 'KonturSurvey',
+            notificationText: 'Merekam data survei',
+            enableWakeLock: true,
+          ),
+        );
+      case TargetPlatform.iOS:
+        // Butuh UIBackgroundModes=location di Info.plist (lihat tools/setup_ios).
+        return AppleSettings(
+          accuracy: LocationAccuracy.best,
+          activityType: ActivityType.fitness,
+          distanceFilter: 0,
+          pauseLocationUpdatesAutomatically: false,
+          showBackgroundLocationIndicator: true,
+          allowBackgroundLocationUpdates: true,
+        );
+      default:
+        return const LocationSettings(accuracy: LocationAccuracy.best);
+    }
+  }
+
   /// Mengembalikan pesan galat, atau null jika berhasil.
   Future<String?> start() async {
     if (!await Geolocator.isLocationServiceEnabled()) return 'GPS belum aktif';
@@ -23,16 +51,7 @@ class SensorService {
     if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
       return 'Izin lokasi ditolak';
     }
-    final settings = AndroidSettings(
-      accuracy: LocationAccuracy.best,
-      distanceFilter: 0,
-      intervalDuration: const Duration(seconds: 1),
-      foregroundNotificationConfig: const ForegroundNotificationConfig(
-        notificationTitle: 'KonturSurvey',
-        notificationText: 'Merekam data survei',
-        enableWakeLock: true,
-      ),
-    );
+    final settings = _settings();
     _ps = Geolocator.getPositionStream(locationSettings: settings).listen((p) {
       position.value = p;
       for (final l in List.of(_listeners)) {

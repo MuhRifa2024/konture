@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../contour/contour.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
+import 'ble_tab.dart';
 
 class HomePage extends StatefulWidget {
   final AppState state;
@@ -21,7 +22,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final s = widget.state;
-    final pages = [MeasureTab(s), PointsTab(s), ContourTab(s), ExportTab(s)];
+    final pages = [
+      MeasureTab(s),
+      PointsTab(s),
+      ContourTab(s),
+      BleTab(s),
+      ExportTab(s)
+    ];
     return Scaffold(
       appBar: AppBar(title: const Text('KonturSurvey')),
       body: ListenableBuilder(listenable: s, builder: (_, __) => pages[tab]),
@@ -32,6 +39,7 @@ class _HomePageState extends State<HomePage> {
           NavigationDestination(icon: Icon(Icons.gps_fixed), label: 'Ukur'),
           NavigationDestination(icon: Icon(Icons.list), label: 'Titik'),
           NavigationDestination(icon: Icon(Icons.terrain), label: 'Kontur'),
+          NavigationDestination(icon: Icon(Icons.bluetooth), label: 'BLE'),
           NavigationDestination(icon: Icon(Icons.ios_share), label: 'Ekspor'),
         ],
       ),
@@ -61,7 +69,9 @@ class _MeasureTabState extends State<MeasureTab> {
     final s = widget.s;
     return ListView(padding: const EdgeInsets.all(16), children: [
       if (s.sensorError != null)
-        Card(color: Colors.red.shade100, child: ListTile(title: Text(s.sensorError!))),
+        Card(
+            color: Colors.red.shade100,
+            child: ListTile(title: Text(s.sensorError!))),
       SegmentedButton<Role>(
         segments: const [
           ButtonSegment(value: Role.standalone, label: Text('Mandiri')),
@@ -79,14 +89,19 @@ class _MeasureTabState extends State<MeasureTab> {
           builder: (_, pr, __) => Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Lat: ${pos?.latitude.toStringAsFixed(7) ?? '-'}'),
-                Text('Lon: ${pos?.longitude.toStringAsFixed(7) ?? '-'}'),
-                Text('Akurasi HP: ±${pos?.accuracy.toStringAsFixed(1) ?? '-'} m'),
-                Text('Altitude GNSS: ${pos?.altitude.toStringAsFixed(1) ?? '-'} m (tidak untuk kontur)'),
-                Text('Tekanan: ${pr?.toStringAsFixed(2) ?? 'tidak ada barometer'} hPa'),
-                Text('Titik tersimpan: ${s.points.length}'),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Lat: ${pos?.latitude.toStringAsFixed(7) ?? '-'}'),
+                    Text('Lon: ${pos?.longitude.toStringAsFixed(7) ?? '-'}'),
+                    Text(
+                        'Akurasi HP: ±${pos?.accuracy.toStringAsFixed(1) ?? '-'} m'),
+                    Text(
+                        'Altitude GNSS: ${pos?.altitude.toStringAsFixed(1) ?? '-'} m (tidak untuk kontur)'),
+                    Text(
+                        'Tekanan: ${pr?.toStringAsFixed(2) ?? 'tidak ada barometer'} hPa'),
+                    Text('Titik tersimpan: ${s.points.length}'),
+                  ]),
             ),
           ),
         ),
@@ -97,11 +112,15 @@ class _MeasureTabState extends State<MeasureTab> {
           child: ListTile(
             leading: Icon(Icons.sensors),
             title: Text('Base aktif: mencatat tekanan tiap 5 detik'),
-            subtitle: Text('Letakkan diam di titik stabil, lalu ekspor sesi di tab Ekspor.'),
+            subtitle: Text(
+                'Letakkan diam di titik stabil, lalu ekspor sesi di tab Ekspor.'),
           ),
         )
       else ...[
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'Nama titik (opsional)')),
+        TextField(
+            controller: name,
+            decoration:
+                const InputDecoration(labelText: 'Nama titik (opsional)')),
         Row(children: [
           const Text('Durasi: '),
           Expanded(
@@ -111,7 +130,8 @@ class _MeasureTabState extends State<MeasureTab> {
               divisions: 7,
               value: seconds.toDouble(),
               label: '$seconds dtk',
-              onChanged: busy ? null : (v) => setState(() => seconds = v.round()),
+              onChanged:
+                  busy ? null : (v) => setState(() => seconds = v.round()),
             ),
           ),
           Text('$seconds dtk'),
@@ -126,16 +146,22 @@ class _MeasureTabState extends State<MeasureTab> {
                     busy = true;
                     progress = 0;
                   });
-                  final msg = await s.measure(name.text, Duration(seconds: seconds), (p) {
+                  final msg = await s
+                      .measure(name.text, Duration(seconds: seconds), (p) {
                     if (mounted) setState(() => progress = p);
                   });
                   if (!mounted) return;
                   setState(() => busy = false);
                   name.clear();
+
+                  if (!context.mounted) return;
                   _snack(context, msg);
                 },
         ),
-        if (busy) Padding(padding: const EdgeInsets.only(top: 8), child: LinearProgressIndicator(value: progress)),
+        if (busy)
+          Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: LinearProgressIndicator(value: progress)),
       ],
     ]);
   }
@@ -153,9 +179,11 @@ class PointsTab extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: TextField(
           controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+          keyboardType: const TextInputType.numberWithOptions(
+              decimal: true, signed: true),
           decoration: const InputDecoration(
-              labelText: 'Elevasi titik Base (m, dari BM/DEM)', border: OutlineInputBorder()),
+              labelText: 'Elevasi titik Base (m, dari BM/DEM)',
+              border: OutlineInputBorder()),
           onSubmitted: (v) {
             s.baseZ = double.tryParse(v) ?? s.baseZ;
             s.save();
@@ -168,12 +196,19 @@ class PointsTab extends StatelessWidget {
           for (final p in s.points.reversed)
             () {
               final (z, m) = s.elevationOf(p);
-              final color = switch (p.qa) { 'baik' => Colors.green, 'cukup' => Colors.orange, _ => Colors.red };
+              final color = switch (p.qa) {
+                'baik' => Colors.green,
+                'cukup' => Colors.orange,
+                _ => Colors.red
+              };
               return ListTile(
                 leading: CircleAvatar(backgroundColor: color, radius: 8),
                 title: Text('${p.name}  •  Z ${z.toStringAsFixed(2)} m'),
-                subtitle: Text('${p.id} • $m • ±${p.accuracy.toStringAsFixed(1)} m • ${p.nUsed} sampel'),
-                trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => s.removePoint(p.id)),
+                subtitle: Text(
+                    '${p.id} • $m • ±${p.accuracy.toStringAsFixed(1)} m • ${p.nUsed} sampel'),
+                trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => s.removePoint(p.id)),
               );
             }(),
         ]),
@@ -193,22 +228,29 @@ class ContourTab extends StatelessWidget {
         const Text('Interval: '),
         DropdownButton<double>(
           value: s.interval,
-          items: [for (final v in [0.5, 1.0, 2.0, 5.0, 10.0]) DropdownMenuItem(value: v, child: Text('$v m'))],
+          items: [
+            for (final v in [0.5, 1.0, 2.0, 5.0, 10.0])
+              DropdownMenuItem(value: v, child: Text('$v m'))
+          ],
           onChanged: (v) {
             s.interval = v ?? s.interval;
             s.refresh();
           },
         ),
         const Spacer(),
-        FilledButton(onPressed: s.computeContours, child: const Text('Hitung kontur')),
+        FilledButton(
+            onPressed: s.computeContours, child: const Text('Hitung kontur')),
       ]),
       const SizedBox(height: 12),
       Container(
         height: 360,
         decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
         child: s.contours.isEmpty
-            ? const Center(child: Text('Belum ada kontur (butuh ≥4 titik kualitas baik/cukup)'))
-            : CustomPaint(painter: _ContourPainter(s.contours), size: Size.infinite),
+            ? const Center(
+                child: Text(
+                    'Belum ada kontur (butuh ≥4 titik kualitas baik/cukup)'))
+            : CustomPaint(
+                painter: _ContourPainter(s.contours), size: Size.infinite),
       ),
       const SizedBox(height: 8),
       Text('${s.contours.length} garis kontur'),
@@ -221,7 +263,10 @@ class _ContourPainter extends CustomPainter {
   _ContourPainter(this.lines);
   @override
   void paint(Canvas canvas, Size size) {
-    var minX = double.infinity, maxX = -double.infinity, minY = double.infinity, maxY = -double.infinity;
+    var minX = double.infinity,
+        maxX = -double.infinity,
+        minY = double.infinity,
+        maxY = -double.infinity;
     var minZ = double.infinity, maxZ = -double.infinity;
     for (final l in lines) {
       minZ = l.elevation < minZ ? l.elevation : minZ;
@@ -237,14 +282,16 @@ class _ContourPainter extends CustomPainter {
     final sc = ((size.width - 2 * pad) / (maxX - minX + 1e-9))
         .clamp(0, (size.height - 2 * pad) / (maxY - minY + 1e-9))
         .toDouble();
-    Offset map((double, double) p) => Offset(pad + (p.$1 - minX) * sc, size.height - pad - (p.$2 - minY) * sc);
+    Offset map((double, double) p) => Offset(
+        pad + (p.$1 - minX) * sc, size.height - pad - (p.$2 - minY) * sc);
     for (final l in lines) {
       final t = maxZ == minZ ? 0.5 : (l.elevation - minZ) / (maxZ - minZ);
       final paint = Paint()
         ..color = Color.lerp(Colors.green.shade700, Colors.brown.shade700, t)!
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
-      final path = Path()..moveTo(map(l.points.first).dx, map(l.points.first).dy);
+      final path = Path()
+        ..moveTo(map(l.points.first).dx, map(l.points.first).dy);
       for (final p in l.points.skip(1)) {
         path.lineTo(map(p).dx, map(p).dy);
       }
@@ -279,7 +326,8 @@ class ExportTab extends StatelessWidget {
           final r = await FilePicker.platform.pickFiles();
           final path = r?.files.single.path;
           if (path == null) return;
-          s.oldGeoJson = jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
+          s.oldGeoJson = jsonDecode(await File(path).readAsString())
+              as Map<String, dynamic>;
           s.oldGeoJsonName = r!.files.single.name;
           s.refresh();
         },
@@ -287,15 +335,21 @@ class ExportTab extends StatelessWidget {
       const Divider(height: 32),
       FilledButton.icon(
         icon: const Icon(Icons.save_alt),
-        label: Text(s.oldGeoJson == null ? 'Ekspor GeoJSON baru' : 'Ekspor hasil merge (file baru)'),
-        onPressed: () => _share(context, 'survey_${DateTime.now().millisecondsSinceEpoch}.geojson', s.buildExport()),
+        label: Text(s.oldGeoJson == null
+            ? 'Ekspor GeoJSON baru'
+            : 'Ekspor hasil merge (file baru)'),
+        onPressed: () => _share(
+            context,
+            'survey_${DateTime.now().millisecondsSinceEpoch}.geojson',
+            s.buildExport()),
       ),
       const Divider(height: 32),
       const Text('Sinkronisasi Base ↔ Rover'),
       OutlinedButton.icon(
         icon: const Icon(Icons.share),
         label: const Text('Ekspor sesi Base (log tekanan)'),
-        onPressed: () => _share(context, 'base_session.json', s.buildBaseSession()),
+        onPressed: () =>
+            _share(context, 'base_session.json', s.buildBaseSession()),
       ),
       OutlinedButton.icon(
         icon: const Icon(Icons.download),
@@ -304,8 +358,15 @@ class ExportTab extends StatelessWidget {
           final r = await FilePicker.platform.pickFiles();
           final path = r?.files.single.path;
           if (path == null) return;
-          s.importBaseSession(jsonDecode(await File(path).readAsString()) as Map<String, dynamic>);
-          if (context.mounted) _snack(context, 'Log Base dimuat (${s.importedBaseLog.length} entri)');
+          s.importBaseSession(jsonDecode(await File(path).readAsString())
+              as Map<String, dynamic>);
+
+          if (context.mounted) {
+            _snack(
+              context,
+              'Log Base dimuat (${s.importedBaseLog.length} entri)',
+            );
+          }
         },
       ),
     ]);

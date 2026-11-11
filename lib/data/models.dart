@@ -8,6 +8,8 @@ class SurveyPoint {
   final int nUsed;
   final String qa; // baik | cukup | buruk
   final String note;
+  final String source; // phone | rtk
+  final int rtkQuality; // 4 = RTK fixed, 5 = RTK float, 0 = bukan RTK
 
   const SurveyPoint({
     required this.id,
@@ -22,6 +24,8 @@ class SurveyPoint {
     required this.nUsed,
     required this.qa,
     this.note = '',
+    this.source = 'phone',
+    this.rtkQuality = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +41,8 @@ class SurveyPoint {
         'nUsed': nUsed,
         'qa': qa,
         'note': note,
+        'source': source,
+        'rtkQuality': rtkQuality,
       };
 
   factory SurveyPoint.fromJson(Map<String, dynamic> j) => SurveyPoint(
@@ -52,5 +58,7 @@ class SurveyPoint {
         nUsed: j['nUsed'],
         qa: j['qa'],
         note: j['note'] ?? '',
+        source: j['source'] ?? 'phone',
+        rtkQuality: (j['rtkQuality'] as num?)?.toInt() ?? 0,
       );
 }

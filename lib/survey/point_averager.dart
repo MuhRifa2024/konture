@@ -41,7 +41,7 @@ AveragedPoint? averageSamples(List<Sample> samples, {double madK = 3.5}) {
   if (samples.length < 3) return null;
   final mLat = _median(samples.map((s) => s.lat).toList());
   final mLon = _median(samples.map((s) => s.lon).toList());
-  final kLat = 111320.0;
+  const kLat = 111320.0;
   final kLon = 111320.0 * math.cos(mLat * math.pi / 180);
 
   double dist(Sample s) => math.sqrt(
@@ -61,7 +61,8 @@ AveragedPoint? averageSamples(List<Sample> samples, {double madK = 3.5}) {
   double mean(Iterable<double> v) => v.reduce((a, b) => a + b) / v.length;
   final lat = mean(kept.map((s) => s.lat));
   final lon = mean(kept.map((s) => s.lon));
-  final press = kept.where((s) => s.pressure != null).map((s) => s.pressure!).toList();
+  final press =
+      kept.where((s) => s.pressure != null).map((s) => s.pressure!).toList();
 
   final varH = mean(kept.map((s) =>
       math.pow((s.lat - lat) * kLat, 2).toDouble() +

@@ -1,0 +1,45 @@
+name: iOS Build Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['ios/**', 'lib/**', 'pubspec.yaml']
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cek folder ios
+        id: chk
+        run: |
+          if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            echo "Folder ios/ belum ada, build iOS dilewati."
+          fi
+
+      - uses: subosito/flutter-action@v2
+        if: steps.chk.outputs.has == 'true'
+        with: { channel: stable, cache: true }
+
+      - name: Build iOS (tanpa signing)
+        if: steps.chk.outputs.has == 'true'
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign
+
+      - name: Zip Runner.app
+        if: steps.chk.outputs.has == 'true'
+        run: |
+          cd build/ios/iphoneos
+          zip -qr "$GITHUB_WORKSPACE/KonturSurvey-ios-unsigned.zip" Runner.app
+
+      - uses: actions/upload-artifact@v4
+        if: steps.chk.outputs.has == 'true'
+        with:
+          name: KonturSurvey-ios-unsigned
+          path: KonturSurvey-ios-unsigned.zip

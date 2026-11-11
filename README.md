@@ -67,8 +67,21 @@ Workflow membuat tag `v0.1.1` dan GitHub Release berisi `kontur-survey-v0.1.1.ap
 - `lib/data` model, state, GeoJSON export/merge
 - `lib/ui` layar
 
-## 6. Batasan versi ini
-- Akurasi: GNSS HP + barometer, bukan geodetik. Untuk cm-level sambungkan receiver RTK (BLE) — `ble_nmea_source.dart` masih kerangka dan UUID harus disesuaikan dengan alat.
+## 6. BLE (v0.2.0)
+- **Sinkronisasi Base → Rover via BLE**: tab BLE. Base menyalakan *Siarkan log Base*, Rover menekan *Cari HP Base* lalu *Ambil log*. Jarak dekat (±20 m).
+- **Receiver RTK/GNSS via BLE**: tab BLE → *Cari receiver*. Aplikasi berlangganan ke semua karakteristik notify dan mengurai NMEA (GGA/GST). Aktifkan *Pakai RTK untuk Ukur titik* agar posisi dan tinggi diambil dari receiver.
+- Android 12+: tambahkan izin `BLUETOOTH_ADVERTISE` di `AndroidManifest.xml` (sudah ada di `tools/setup_android.sh`).
+
+## 7. iOS
+```powershell
+.\tools\setup_ios.ps1     # Windows (atau ./tools/setup_ios.sh di macOS)
+```
+Skrip membuat folder `ios/` dan mengisi `Info.plist` (lokasi, Bluetooth, sensor gerak, background mode).
+Build iOS hanya bisa dilakukan di macOS (Xcode atau runner GitHub `macos-latest`, lihat `.github/workflows/ios-build.yml`).
+Memasang ke iPhone butuh signing: Xcode + Apple ID (gratis, berlaku 7 hari) atau Apple Developer Program (TestFlight).
+
+## 8. Batasan versi ini
+- Akurasi: GNSS HP + barometer, bukan geodetik. Untuk cm-level pakai receiver RTK lewat BLE (belum teruji dengan alat nyata).
 - Trilaterasi (`core/trilaterate.dart`) sudah teruji unit tetapi belum punya layar input jarak laser/UWB.
 - Penyimpanan memakai JSON; ganti ke SQLite (drift) untuk data besar.
 - Belum ada peta offline, penggabungan titik Rover A+B otomatis, fusi DEM, dan modul LLM.
